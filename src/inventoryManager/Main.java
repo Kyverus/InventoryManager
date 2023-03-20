@@ -23,6 +23,7 @@ import javax.swing.JTable;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.CardLayout;
+import javax.swing.border.EtchedBorder;
 
 public class Main {
 
@@ -64,7 +65,10 @@ public class Main {
 	private JTextField editNameField;
 	private JTextField editCategoryField;
 	private JTextField editPriceField;
-	private JTextField searchIDField;
+	private JTextField editSearchIDField;
+	private JTextField restockItemField;
+	private JTextField restockOrSellSearchIDField;
+	private JTextField sellItemField;
 	
 	public void connect() {
 		try {
@@ -262,7 +266,7 @@ public class Main {
 				iname = editNameField.getText();
 				icategory = editCategoryField.getText();
 				iprice = editPriceField.getText();
-				iid  = searchIDField.getText();
+				iid  = editSearchIDField.getText();
 				
 				try {
 					pst = con.prepareStatement("UPDATE items SET name = ?,category = ?,price = ? WHERE id = ?");
@@ -290,7 +294,7 @@ public class Main {
 		deleteItemButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
                 String iid;
-				iid  = searchIDField.getText();
+				iid  = editSearchIDField.getText();
 				try {
 					pst = con.prepareStatement("DELETE FROM items WHERE id = ?");
 				    pst.setString(1, iid);
@@ -317,19 +321,19 @@ public class Main {
 		lblEditItem.setBounds(288, 11, 103, 14);
 		editPanel.add(lblEditItem);
 		
-		JPanel panel_2 = new JPanel();
-		panel_2.setBounds(10, 45, 287, 56);
-		editPanel.add(panel_2);
-		panel_2.setBorder(new TitledBorder(null, "Search by ID", TitledBorder.LEADING, TitledBorder.TOP, null, null));
-		panel_2.setLayout(null);
+		JPanel searchPanel = new JPanel();
+		searchPanel.setBounds(10, 45, 287, 56);
+		editPanel.add(searchPanel);
+		searchPanel.setBorder(new TitledBorder(null, "Search by ID", TitledBorder.LEADING, TitledBorder.TOP, null, null));
+		searchPanel.setLayout(null);
 		
-		searchIDField = new JTextField();
-		searchIDField.addKeyListener(new KeyAdapter() {
+		editSearchIDField = new JTextField();
+		editSearchIDField.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyReleased(KeyEvent e) {
 				try {
 			          
-		            String id = searchIDField.getText();
+		            String id = editSearchIDField.getText();
 		 
 		                pst = con.prepareStatement("SELECT name,category,price FROM items WHERE id = ?");
 		                pst.setString(1, id);
@@ -355,9 +359,191 @@ public class Main {
 		        }
 			}
 		});
-		searchIDField.setColumns(10);
-		searchIDField.setBounds(53, 18, 180, 20);
-		panel_2.add(searchIDField);
+		editSearchIDField.setColumns(10);
+		editSearchIDField.setBounds(53, 18, 180, 20);
+		searchPanel.add(editSearchIDField);
+		
+		JPanel restockOrSellPanel = new JPanel();
+		restockOrSellPanel.setLayout(null);
+		restockOrSellPanel.setBackground(Color.DARK_GRAY);
+		cardLayoutPanel.add(restockOrSellPanel, "4");
+		
+		JPanel restockPanel = new JPanel();
+		restockPanel.setLayout(null);
+		restockPanel.setBounds(10, 141, 660, 82);
+		restockOrSellPanel.add(restockPanel);
+		
+		restockItemField = new JTextField();
+		restockItemField.setColumns(10);
+		restockItemField.setBounds(131, 31, 255, 20);
+		restockPanel.add(restockItemField);
+		
+		JButton restockItemButton = new JButton("Restock Item");
+		restockItemButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				
+				String istock = "", iid;
+				iid  = restockOrSellSearchIDField.getText();
+				
+				try {
+					 
+	                pst = con.prepareStatement("SELECT stock FROM items WHERE id = ?");
+	                pst.setString(1, iid);
+	                ResultSet rs = pst.executeQuery();
+	 
+		            if(rs.next()==true) {
+		          
+		                istock = rs.getString(1);   
+		            
+		            }else {
+		            	JOptionPane.showMessageDialog(null, "ID Not Found", "Input Error", 0);
+		            	restockItemField.setText("");
+			            restockOrSellSearchIDField.setText("");
+			            restockOrSellSearchIDField.requestFocus();
+		            }
+		        }catch (SQLException ex) {
+		          
+		        }
+				
+				String iitemno = restockItemField.getText();
+				
+				//Validations
+				if(!iitemno.matches("[0-9]+")) {
+					JOptionPane.showMessageDialog(null, "Please enter the number of items correctly", "Input Error", 0);
+					restockItemField.setText("");
+		            restockOrSellSearchIDField.setText("");
+		            restockOrSellSearchIDField.requestFocus();
+				}
+				
+				if(istock.matches("[0-9]+")  || iitemno.matches("[0-9]+")) {
+					
+					int stockno = Integer.parseInt(istock) + Integer.parseInt(iitemno);
+					
+					try {
+						pst = con.prepareStatement("UPDATE items SET stock = ? WHERE id = ?");
+						pst.setString(1, Integer.toString(stockno));
+			            pst.setString(2, iid);
+			            pst.executeUpdate();
+			            JOptionPane.showMessageDialog(null, "Item Restocked!");
+			            loadTable();
+			          
+			            restockItemField.setText("");
+			            restockOrSellSearchIDField.setText("");
+			            restockOrSellSearchIDField.requestFocus();
+			            
+					}catch (SQLException e1) {
+						e1.printStackTrace();
+					}
+				}
+				
+			}
+		});
+		restockItemButton.setBounds(463, 22, 118, 39);
+		restockPanel.add(restockItemButton);
+		
+		JLabel itemStockLabel = new JLabel("No. of Items:");
+		itemStockLabel.setBounds(32, 34, 89, 14);
+		restockPanel.add(itemStockLabel);
+		
+		JLabel lblRestockItem = new JLabel("RESTOCK ITEM");
+		lblRestockItem.setForeground(Color.WHITE);
+		lblRestockItem.setFont(new Font("Franklin Gothic Book", Font.BOLD, 20));
+		lblRestockItem.setBounds(266, 11, 144, 14);
+		restockOrSellPanel.add(lblRestockItem);
+		
+		JPanel searchPanel_1 = new JPanel();
+		searchPanel_1.setLayout(null);
+		searchPanel_1.setBorder(new TitledBorder(new EtchedBorder(EtchedBorder.LOWERED, new Color(255, 255, 255), new Color(160, 160, 160)), "Enter ID:", TitledBorder.LEADING, TitledBorder.TOP, null, new Color(0, 0, 0)));
+		searchPanel_1.setBounds(10, 45, 287, 56);
+		restockOrSellPanel.add(searchPanel_1);
+		
+		restockOrSellSearchIDField = new JTextField();
+		restockOrSellSearchIDField.setColumns(10);
+		restockOrSellSearchIDField.setBounds(53, 18, 180, 20);
+		searchPanel_1.add(restockOrSellSearchIDField);
+		
+		JPanel sellPanel = new JPanel();
+		sellPanel.setLayout(null);
+		sellPanel.setBounds(10, 255, 660, 82);
+		restockOrSellPanel.add(sellPanel);
+		
+		sellItemField = new JTextField();
+		sellItemField.setColumns(10);
+		sellItemField.setBounds(131, 31, 255, 20);
+		sellPanel.add(sellItemField);
+		
+		JButton sellItemButton = new JButton("Sell Item");
+		sellItemButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				String istock = "", iid;
+				iid  = restockOrSellSearchIDField.getText();
+				
+				try {
+					 
+	                pst = con.prepareStatement("SELECT stock FROM items WHERE id = ?");
+	                pst.setString(1, iid);
+	                ResultSet rs = pst.executeQuery();
+	 
+		            if(rs.next()==true) {
+		          
+		                istock = rs.getString(1);   
+		            
+		            }else {
+		            	JOptionPane.showMessageDialog(null, "ID Not Found", "Input Error", 0);
+		            	restockItemField.setText("");
+			            restockOrSellSearchIDField.setText("");
+			            restockOrSellSearchIDField.requestFocus();
+		            }
+		        }catch (SQLException ex) {
+		          
+		        }
+				
+				String iitemno = sellItemField.getText();
+				
+				//Validations
+				if(!iitemno.matches("[0-9]+")) {
+					JOptionPane.showMessageDialog(null, "Enter the number of items correctly", "Input Error", 0);
+					restockItemField.setText("");
+		            restockOrSellSearchIDField.setText("");
+		            restockOrSellSearchIDField.requestFocus();
+				}
+				
+				if(istock.matches("[0-9]+")  || iitemno.matches("[0-9]+")) {
+					
+					int currentstock = Integer.parseInt(istock);
+					int sellno = Integer.parseInt(iitemno);
+					
+					if((currentstock - sellno) >= 0) {
+						try {
+							pst = con.prepareStatement("UPDATE items SET stock = ? WHERE id = ?");
+							pst.setString(1, Integer.toString(currentstock - sellno));
+				            pst.setString(2, iid);
+				            pst.executeUpdate();
+				            JOptionPane.showMessageDialog(null, "Item Sold!");
+				            loadTable();
+				          
+				            sellItemField.setText("");
+				            restockOrSellSearchIDField.setText("");
+				            restockOrSellSearchIDField.requestFocus();
+				            
+						}catch (SQLException e1) {
+							e1.printStackTrace();
+						}
+					}else {
+						JOptionPane.showMessageDialog(null, "Cannot sell " + sellno + " items with a current stock of " + currentstock, "Logic Error", 0);
+						sellItemField.setText("");
+			            restockOrSellSearchIDField.setText("");
+			            restockOrSellSearchIDField.requestFocus();
+					}
+				}
+			}
+		});
+		sellItemButton.setBounds(463, 22, 118, 39);
+		sellPanel.add(sellItemButton);
+		
+		JLabel lblNoOfItems = new JLabel("No. of Items:");
+		lblNoOfItems.setBounds(32, 34, 89, 14);
+		sellPanel.add(lblNoOfItems);
 		
 		JPanel menuPanel = new JPanel();
 		menuPanel.setBackground(new Color(245, 210, 90));
@@ -390,7 +576,7 @@ public class Main {
 				cl.show(cardLayoutPanel, "1");
 			}
 		});
-		viewPanelButton.setBounds(28, 145, 134, 37);
+		viewPanelButton.setBounds(28, 102, 134, 37);
 		menuPanel.add(viewPanelButton);
 		
 		JButton editPanelButton = new JButton("Edit Item");
@@ -404,8 +590,22 @@ public class Main {
 				cl.show(cardLayoutPanel, "3");
 			}
 		});
-		editPanelButton.setBounds(28, 265, 134, 37);
+		editPanelButton.setBounds(28, 169, 134, 37);
 		menuPanel.add(editPanelButton);
+		
+		JButton restockOrSellPanelButton = new JButton("Restock/Sell");
+		restockOrSellPanelButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				cl.show(cardLayoutPanel, "4");
+			}
+		});
+		restockOrSellPanelButton.setForeground(Color.WHITE);
+		restockOrSellPanelButton.setFont(new Font("Tahoma", Font.BOLD, 12));
+		restockOrSellPanelButton.setFocusPainted(false);
+		restockOrSellPanelButton.setBorderPainted(false);
+		restockOrSellPanelButton.setBackground(new Color(37, 37, 37));
+		restockOrSellPanelButton.setBounds(28, 237, 134, 37);
+		menuPanel.add(restockOrSellPanelButton);
 		
 		JButton exitButton = new JButton("EXIT");
 		exitButton.setForeground(Color.WHITE);
